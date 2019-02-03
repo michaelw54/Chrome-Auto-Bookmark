@@ -1,0 +1,63 @@
+/* File: manifest.json
+ * -------------------
+ * A manifest file (like this one) is used to
+ * give Chrome information about your extension.
+ *
+ * You shouldn't need to change anything in this file
+ * unless you're doing extensions.
+ *
+ * For more details, check out the documentation:
+ * https://developer.chrome.com/extensions/manifest
+ */
+
+{
+  // Required
+  "manifest_version": 2,
+  "name": "Cal to Butt",
+  "version": "0.0.1",
+
+  // Recommended
+  "description": "Chrome Extension Hackpack @ TreeHacks 2019",
+  "icons": {
+    "16": "icons/TreeHacks-white-16.png",
+    "32": "icons/TreeHacks-white-32.png",
+    "48": "icons/TreeHacks-white-48.png",
+    "64": "icons/TreeHacks-white-64.png",
+    "96": "icons/TreeHacks-white-96.png",
+    "128": "icons/TreeHacks-white-128.png"
+  },
+
+  // Optional
+  "homepage_url": "https://www.treehacks.com/",
+
+  // Put any additional permissions your applications needs here.
+  // For a list of possibilities, see
+  // https://developer.chrome.com/extensions/declare_permissions
+  "permissions": [
+    "history",
+    "storage"
+  ],
+  "background": {
+    "scripts": ["/src/background.js"],
+    "persistent": false
+},
+
+  // Probably will not need to be modified unless you *really*
+  // know what you're doing
+  "browser_action": {
+    "default_icon": "icons/TreeHacks-white-19.png",
+    "default_title": "Cal to Butt",
+    "default_popup": "src/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "/src/content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}
