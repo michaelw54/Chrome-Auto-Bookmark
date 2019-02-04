@@ -15,6 +15,8 @@ chrome.runtime.sendMessage(
       console.log(response.success);
   }		   
 );
+
+
 /*
 // adding a button to every "div" class of the page
 var unorderedLists = document.getElementsByTagName("ul"); // get all dem ULs
