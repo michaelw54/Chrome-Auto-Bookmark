@@ -28,6 +28,7 @@ function mode(array)
     return [maxEl, modeMap];
 }
 
+// used this to retrieve the id of all bookmarks/the bookmarks bar
 function printBookmarks(id) {
     chrome.bookmarks.getChildren(id, function(children) {
 	    children.forEach(function(bookmark) { 
@@ -38,13 +39,6 @@ function printBookmarks(id) {
 }
 
 // printBookmarks('0');
-
-// create a bookmarks folder called "automatic bookmarks" (if not already created)
-var bookmarksId;
-chrome.bookmarks.create({'parentId': '1', 'title': "automatic bookmarks"}, function(result) {
-	console.log("automatic bookmarks id: " + result.id);
-	bookmarksId = result.id;
-});
 
 // retrieving all chrome history
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -71,29 +65,55 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 			console.log(url);
 		});
 		*/
-		var bookmarkExists = false;
+
 		//search if bookmark already created
 		chrome.bookmarks.search({title: mode(fullHistory)[0]},
 					function(results) {
-					    if (results.length > 0) {
-						bookmarkExists = true;
-						console.log("Bookmark already exists for this URL!");
-					    }
+					    var bookmarkExists = false;
+					    var bookmarksId;
+					    // create a bookmarks folder called "automatic bookmarks" (if not already created) in the bookmarks bar
+					    
+					    chrome.bookmarks.search({'title': "automatic bookmarks"}, function(Autoresults) {
+						    if (Autoresults.length > 0) {
+							bookmarksId = Autoresults[0].id;
+							console.log("automatic bookmarks id: " + bookmarksId);
+							if (results.length > 0) {
+							    bookmarkExists = true;
+							    console.log("Bookmark already exists for this URL!");
+							}
+							else if (mode(fullHistory)[1][mode(fullHistory)[0]] > 15 && !(bookmarkExists)) {
+							    alert("You've visited " + mode(fullHistory)[0] + " " + mode(fullHistory)[1][mode(fullHistory)[0]] + " times today, so we've decided to bookmark it for you!");
+							    // create a new bookmark
+							    var bookmarkString = mode(fullHistory)[0];
+							    console.log("parentId: " + bookmarksId);
+							    chrome.bookmarks.create({'parentId': bookmarksId, 'url': bookmarkString, 'title': bookmarkString},
+										    function(result) {
+											console.log("bookmark created: " + result.url);
+										    });
+							}
+						    }
+						    else {
+							chrome.bookmarks.create({'parentId': '1', 'title': "automatic bookmarks"}, function(result) {
+								bookmarksId = result.id;
+								console.log("automatic bookmarks id: " + bookmarksId);
+								if (results.length > 0) {
+								    bookmarkExists = true;
+								    console.log("Bookmark already exists for this URL!");
+								}
+								else if (mode(fullHistory)[1][mode(fullHistory)[0]] > 15 && !(bookmarkExists)) {
+								    alert("You've visited " + mode(fullHistory)[0] + " " + mode(fullHistory)[1][mode(fullHistory)[0]] + " times today, so we've decided to bookmark it for you!");
+								    // create a new bookmark
+								    var bookmarkString = mode(fullHistory)[0];
+								    console.log("parentId: " + bookmarksId);
+								    chrome.bookmarks.create({'parentId': bookmarksId, 'url': bookmarkString, 'title': bookmarkString},
+											    function(result) {
+												console.log("bookmark created: " + result.url);
+											    });
+								}
+							    });						       
+						    }						    
+						});
 					});
-				       
-		if (mode(fullHistory)[1][mode(fullHistory)[0]] > 15 && !(bookmarkExists)) {
-		    alert("You've visited " + mode(fullHistory)[0] + " " + mode(fullHistory)[1][mode(fullHistory)[0]] + " times today, so we've decided to bookmark it for you!");
-		    // create a new bookmark
-		    var bookmarkString = mode(fullHistory)[0];
-		    chrome.bookmarks.create({
-		        parentId: bookmarksId,
-			url: bookmarkString,
-			title: bookmarkString
-		    },
-			function(result) {
-			    console.log("bookmark created: " + result.url);
-		     });
-		}
-	});
+	    });
 	sendResponse({success: "successfully retrieved chrome history data"});
-});
+    });
