@@ -12,38 +12,82 @@ function mode(array)
         return null;
     var modeMap = {};
     var maxEl = array[0], maxCount = 1;
+    var minEl = array[0], minCount = 1;
     for(var i = 0; i < array.length; i++)
 	{
 	    var el = array[i];
 	    if(modeMap[el] == null)
 		modeMap[el] = 1;
 	    else
-		modeMap[el]++;  
+		modeMap[el]++;
 	    if(modeMap[el] > maxCount)
 		{
 		    maxEl = el;
 		    maxCount = modeMap[el];
 		}
+	    if (modeMap[el] < minCount)
+		{
+		    minEl = el;
+		    minCount = modeMap[el];
+		}
 	}
-    return [maxEl, modeMap];
+    return [maxEl, modeMap, minEl];
+}
+
+// return six keys with the largest values in a map/dict
+function getTopSix(modeMap, minEl) {
+    var topSix = [];
+    while (topSix.length < 6 || topSix.length == modeMap.size) {
+      var biggest = minEl;
+      for (var key in modeMap) {
+        console.log(key + ": " + modeMap[key]);
+        console.log(topSix.indexOf(key))
+        if (topSix.indexOf(key) == -1) {
+          if (modeMap[key] > modeMap[biggest]) biggest = key;
+        } else {
+          continue;
+        }
+      }
+      topSix.push(biggest);
+    }
+      return topSix;
 }
 
 // used this to retrieve the id of all bookmarks/the bookmarks bar
 function printBookmarks(id) {
     chrome.bookmarks.getChildren(id, function(children) {
-	    children.forEach(function(bookmark) { 
+	    children.forEach(function(bookmark) {
 		    console.log(bookmark.title + ": " + bookmark.id);
 		    printBookmarks(bookmark.id);
 		});
 	});
 }
 
-// printBookmarks('0');
+var autoBookmarksId;
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  if (message == "intialize bookmarks folder") {
+  chrome.bookmarks.search({'title': "Automatic Bookmarks"}, function(Autoresults) {
+    console.log(Autoresults);
+    console.log("CONNECTED!");
+    if (Autoresults.length > 0) {
+        autoBookmarksId = Autoresults[0].id;
+        console.log("automatic bookmarks id: " + autoBookmarksId);
+    } else {
+        chrome.bookmarks.create({'parentId': '1', 'title': "Automatic Bookmarks"}, function(result) {
+        autoBookmarksId = result.id;
+        console.log("automatic bookmarks id: " + autoBookmarksId);
+      });
+    }
+  });
+  sendResponse({success: "successfully intialized Autobookmarks Folder"});
+}
+});
 
 // retrieving all chrome history
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+var fullHistory = [];
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  if (message == "bookmark URLs") {
 	chrome.history.search({text:'', maxResults: 1000}, function(results) {
-		var fullHistory = [];
 		results.forEach(function(page) {
 			if (page.url.indexOf('.com') >= 0) { // to strip everything after .com
 				var shortUrl = page.url.substring(0, page.url.indexOf('.com') + '.com'.length);
@@ -57,8 +101,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 			} else if (page.url.indexOf('.edu') >= 0) { // to strip everything after .edu
 				var shortUrl = page.url.substring(0, page.url.indexOf('.edu') + '.edu'.length);
 				fullHistory[fullHistory.length] = shortUrl;
-			}		
+			}
 		});
+  })
+  sendResponse({success: "successfully retrieved chrome history data"});
+}});
+
 		// logging all shortened URLs in background console
 		/*
 		fullHistory.forEach(function(url) {
@@ -66,54 +114,25 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 		});
 		*/
 
-		//search if bookmark already created
-		chrome.bookmarks.search({title: mode(fullHistory)[0]},
-					function(results) {
-					    var bookmarkExists = false;
-					    var bookmarksId;
-					    // create a bookmarks folder called "automatic bookmarks" (if not already created) in the bookmarks bar
-					    
-					    chrome.bookmarks.search({'title': "automatic bookmarks"}, function(Autoresults) {
-						    if (Autoresults.length > 0) {
-							bookmarksId = Autoresults[0].id;
-							console.log("automatic bookmarks id: " + bookmarksId);
-							if (results.length > 0) {
-							    bookmarkExists = true;
-							    console.log("Bookmark already exists for this URL!");
-							}
-							else if (mode(fullHistory)[1][mode(fullHistory)[0]] > 15 && !(bookmarkExists)) {
-							    alert("You've visited " + mode(fullHistory)[0] + " " + mode(fullHistory)[1][mode(fullHistory)[0]] + " times today, so we've decided to bookmark it for you!");
-							    // create a new bookmark
-							    var bookmarkString = mode(fullHistory)[0];
-							    console.log("parentId: " + bookmarksId);
-							    chrome.bookmarks.create({'parentId': bookmarksId, 'url': bookmarkString, 'title': bookmarkString},
-										    function(result) {
-											console.log("bookmark created: " + result.url);
-										    });
-							}
-						    }
-						    else {
-							chrome.bookmarks.create({'parentId': '1', 'title': "automatic bookmarks"}, function(result) {
-								bookmarksId = result.id;
-								console.log("automatic bookmarks id: " + bookmarksId);
-								if (results.length > 0) {
-								    bookmarkExists = true;
-								    console.log("Bookmark already exists for this URL!");
-								}
-								else if (mode(fullHistory)[1][mode(fullHistory)[0]] > 15 && !(bookmarkExists)) {
-								    alert("You've visited " + mode(fullHistory)[0] + " " + mode(fullHistory)[1][mode(fullHistory)[0]] + " times today, so we've decided to bookmark it for you!");
-								    // create a new bookmark
-								    var bookmarkString = mode(fullHistory)[0];
-								    console.log("parentId: " + bookmarksId);
-								    chrome.bookmarks.create({'parentId': bookmarksId, 'url': bookmarkString, 'title': bookmarkString},
-											    function(result) {
-												console.log("bookmark created: " + result.url);
-											    });
-								}
-							    });						       
-						    }						    
-						});
-					});
-	    });
-	sendResponse({success: "successfully retrieved chrome history data"});
+    // mode(fullHistory) is a Map containing {Most visited URL, [URL, # of visits], Least visited URL}
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  console.log(fullHistory);
+  var mostVisited = getTopSix(mode(fullHistory)[1], mode(fullHistory)[2]);
+  if (message == "create bookmarks"){
+    mostVisited.forEach(function(URL) {
+      console.log(URL);
+      chrome.bookmarks.search({'title': URL}, function(results) {
+        if (results.length > 0) {
+          console.log("Bookmark already exists for this URL: " + URL);
+        }
+        else {
+          chrome.bookmarks.create({'parentId': autoBookmarksId, 'title': URL, 'url': URL}, function(bookmark) {
+            console.log("Created bookmark: " + bookmark.url);
+          });
+        }
+      });
     });
+  }
+    sendResponse({success: "successfully created bookmarks"});
+  });

@@ -10,12 +10,31 @@
 
 // send a message to background.js to retrieve chrome history
 chrome.runtime.sendMessage(
-  "getHistory",
+  "intialize bookmarks folder",
   function(response) {
       console.log(response.success);
-  }		   
+  }
 );
 
+chrome.runtime.sendMessage(
+    "bookmark URLs",
+    function(response) {
+        console.log(response.success);
+        chrome.runtime.sendMessage(
+            "create bookmarks",
+            function(response) {
+                console.log(response.success);
+              }
+            )
+    }
+);
+
+// setTimeout(chrome.runtime.sendMessage(
+//     "create bookmarks",
+//     function(response) {
+//         console.log(response.success);
+//       }
+//     ), 10000);
 
 /*
 // adding a button to every "div" class of the page
